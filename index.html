@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Afazeres</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="pontos">
+        <div>Pontos: <span id="pontosTotal">0</span></div>
+        <div>Nível: <span id="nivelAtual" class="nivel">1</span></div>
+        <div class="progresso">
+            <div id="progressoBarra" class="progresso-barra" style="width: 0%"></div>
+        </div>
+    </div>
+
+    <div class="quadro">
+        <div id="listas-container">
+            <!-- As listas serão adicionadas aqui -->
+        </div>
+        <div class="adicionar-lista" onclick="criarNovaLista()">
+            <i class="fas fa-plus"></i>
+            Adicionar outra lista
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
