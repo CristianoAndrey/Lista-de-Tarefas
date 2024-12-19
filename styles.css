@@ -91,8 +91,9 @@ button:hover {
 .lista-header {
     padding: 16px;
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
+    gap: 8px;
 }
 
 .lista-titulo {
@@ -102,6 +103,8 @@ button:hover {
     font-size: 1rem;
     text-align: center;
     transform: translateX(-5px);
+    flex: 1;
+    margin-right: 10px;
 }
 
 .input-grupo {
@@ -265,4 +268,56 @@ button:not(.excluir),
 .pontos div {
     transform: translateX(-5px);
     text-align: center;
+}
+
+.apagar-lista {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    width: auto;
+    transition: background 0.2s;
+    transform: none;
+}
+
+.apagar-lista:hover {
+    background: #c82333;
+}
+
+.apagar-tudo {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-top: 12px;
+    width: 100%;
+    transition: background 0.2s;
+    transform: none;
+}
+
+.apagar-tudo:hover {
+    background: #c82333;
+}
+
+.apagar-concluidas {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    width: auto;
+    transition: background 0.2s;
+    transform: none;
+}
+
+.apagar-concluidas:hover {
+    background: #5a6268;
 }
