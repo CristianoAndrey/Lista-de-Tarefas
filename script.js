@@ -2,72 +2,46 @@ let pontos = parseInt(localStorage.getItem('pontos')) || 0;
 let nivel = parseInt(localStorage.getItem('nivel')) || 1;
 const pontosParaProximoNivel = 100;
 
-function salvarEstado() {
-    localStorage.setItem('pontos', pontos);
-    localStorage.setItem('nivel', nivel);
-    
-    const listasContainer = document.getElementById('listas-container');
-    const listas = Array.from(listasContainer.children).map(lista => {
-        const titulo = lista.querySelector('.lista-titulo').textContent;
-        const tarefas = Array.from(lista.querySelectorAll('.tarefa')).map(tarefa => ({
-            texto: tarefa.querySelector('span').textContent,
-            prioridade: tarefa.querySelector('input[type="checkbox"]').getAttribute('data-prioridade'),
-            completa: tarefa.classList.contains('completa')
-        }));
-        return { titulo, tarefas };
-    });
-    
-    localStorage.setItem('listas', JSON.stringify(listas));
-}
+document.addEventListener('DOMContentLoaded', () => {
+    carregarDados();
+});
 
-function carregarEstado() {
-    const listasContainer = document.getElementById('listas-container');
-    const listaSalva = localStorage.getItem('listas');
-    
-    if (listaSalva) {
-        const listas = JSON.parse(listaSalva);
-        listas.forEach(lista => {
-            const novaLista = document.createElement('div');
-            novaLista.className = 'lista';
-            novaLista.innerHTML = `
-                <div class="lista-header">
-                    <h2 class="lista-titulo">${lista.titulo}</h2>
-                </div>
-                <div class="lista-tarefas">
-                    <div class="input-grupo">
-                        <select class="prioridade-select">
-                            <option value="baixa">Prioridade Baixa (1 ponto)</option>
-                            <option value="media">Prioridade Média (3 pontos)</option>
-                            <option value="alta">Prioridade Alta (5 pontos)</option>
-                        </select>
-                        <input type="text" class="nova-tarefa" placeholder="Adicionar um cartão" onkeypress="enviarComEnter(event, this)">
-                        <button onclick="adicionarTarefa(this)">Adicionar</button>
-                    </div>
-                </div>
-            `;
-            listasContainer.appendChild(novaLista);
-
-            const listaTarefas = novaLista.querySelector('.lista-tarefas');
-            lista.tarefas.forEach(tarefa => {
-                const novaTarefa = document.createElement('div');
-                novaTarefa.className = 'tarefa';
-                novaTarefa.draggable = true;
-                novaTarefa.classList.add(`prioridade-${tarefa.prioridade}`);
-                if (tarefa.completa) {
-                    novaTarefa.classList.add('completa', 'tarefa-completada');
-                }
-                
-                novaTarefa.innerHTML = `
-                    <input type="checkbox" onchange="concluirTarefa(this)" data-prioridade="${tarefa.prioridade}" ${tarefa.completa ? 'checked' : ''}>
-                    <span>${tarefa.texto}</span>
-                    <button class="excluir" onclick="excluirTarefa(this)">✕</button>
-                `;
-                
-                listaTarefas.appendChild(novaTarefa);
-                adicionarEventosDragDrop(novaTarefa);
+function salvarDados() {
+    const listas = [];
+    document.querySelectorAll('.lista').forEach(lista => {
+        const tarefas = [];
+        lista.querySelectorAll('.tarefa').forEach(tarefa => {
+            tarefas.push({
+                texto: tarefa.querySelector('span').textContent,
+                prioridade: tarefa.querySelector('input[type="checkbox"]').getAttribute('data-prioridade'),
+                completa: tarefa.classList.contains('completa'),
             });
         });
-    }
+        
+        listas.push({
+            titulo: lista.querySelector('.lista-titulo').textContent,
+            tarefas: tarefas
+        });
+    });
+
+    localStorage.setItem('listas', JSON.stringify(listas));
+    localStorage.setItem('pontos', pontos);
+    localStorage.setItem('nivel', nivel);
+}
+
+function carregarDados() {
+    const listasData = JSON.parse(localStorage.getItem('listas')) || [];
+    const listasContainer = document.getElementById('listas-container');
+    listasContainer.innerHTML = '';
+
+    listasData.forEach(listaData => {
+        const novaLista = criarNovaListaElement(listaData.titulo);
+        listasContainer.appendChild(novaLista);
+
+        listaData.tarefas.forEach(tarefa => {
+            adicionarTarefaExistente(novaLista, tarefa);
+        });
+    });
 
     document.getElementById('pontosTotal').textContent = pontos;
     document.getElementById('nivelAtual').textContent = nivel;
@@ -75,38 +49,54 @@ function carregarEstado() {
     document.getElementById('progressoBarra').style.width = progresso + '%';
 }
 
+function criarNovaListaElement(titulo) {
+    const novaLista = document.createElement('div');
+    novaLista.className = 'lista';
+    novaLista.innerHTML = `
+        <div class="lista-header">
+            <h2 class="lista-titulo">${titulo}</h2>
+            <button class="apagar-concluidas" onclick="apagarConcluidas(this)">Limpar Concluídas</button>
+            <button class="apagar-lista" onclick="apagarLista(this)">✕</button>
+        </div>
+        <div class="lista-tarefas">
+            <div class="input-grupo">
+                <select class="prioridade-select">
+                    <option value="baixa">Prioridade Baixa (1 ponto)</option>
+                    <option value="media">Prioridade Média (3 pontos)</option>
+                    <option value="alta">Prioridade Alta (5 pontos)</option>
+                </select>
+                <input type="text" class="nova-tarefa" placeholder="Adicionar um cartão" onkeypress="enviarComEnter(event, this)">
+                <button onclick="adicionarTarefa(this)">Adicionar</button>
+            </div>
+        </div>
+    `;
+    return novaLista;
+}
+
+function adicionarTarefaExistente(lista, tarefaData) {
+    const listaTarefas = lista.querySelector('.lista-tarefas');
+    const novaTarefa = document.createElement('div');
+    novaTarefa.className = 'tarefa';
+    if (tarefaData.completa) novaTarefa.classList.add('completa');
+    novaTarefa.draggable = true;
+    
+    novaTarefa.innerHTML = `
+        <input type="checkbox" onchange="concluirTarefa(this)" data-prioridade="${tarefaData.prioridade}" ${tarefaData.completa ? 'checked' : ''}>
+        <span>${tarefaData.texto}</span>
+        <button class="excluir" onclick="excluirTarefa(this)">✕</button>
+    `;
+    
+    listaTarefas.appendChild(novaTarefa);
+    adicionarEventosDragDrop(novaTarefa);
+}
+
 function criarNovaLista() {
     const titulo = prompt('Nome da lista:');
     if (titulo) {
         const listasContainer = document.getElementById('listas-container');
-        const novaLista = document.createElement('div');
-        novaLista.className = 'lista';
-        novaLista.innerHTML = `
-            <div class="lista-header">
-                <h2 class="lista-titulo">${titulo}</h2>
-            </div>
-            <div class="lista-tarefas">
-                <div class="input-grupo">
-                    <select class="prioridade-select">
-                        <option value="baixa">Prioridade Baixa (1 ponto)</option>
-                        <option value="media">Prioridade Média (3 pontos)</option>
-                        <option value="alta">Prioridade Alta (5 pontos)</option>
-                    </select>
-                    <input type="text" class="nova-tarefa" placeholder="Adicionar um cartão" onkeypress="enviarComEnter(event, this)">
-                    <button onclick="adicionarTarefa(this)">Adicionar</button>
-                </div>
-            </div>
-        `;
+        const novaLista = criarNovaListaElement(titulo);
         listasContainer.appendChild(novaLista);
-        salvarEstado();
-    }
-}
-
-function enviarComEnter(event, input) {
-    if (event.key === 'Enter') {
-        event.preventDefault();
-        const botao = input.nextElementSibling;
-        adicionarTarefa(botao);
+        salvarDados();
     }
 }
 
@@ -134,7 +124,7 @@ function adicionarTarefa(botao) {
         listaTarefas.appendChild(novaTarefa);
         input.value = '';
         adicionarEventosDragDrop(novaTarefa);
-        salvarEstado();
+        salvarDados();
     }
 }
 
@@ -157,7 +147,7 @@ function concluirTarefa(checkbox) {
         atualizarPontos(-pontosGanhos);
         mostrarNotificacao(`-${pontosGanhos} pontos!`, 'erro');
     }
-    salvarEstado();
+    salvarDados();
 }
 
 function atualizarPontos(pontosGanhos) {
@@ -171,7 +161,7 @@ function atualizarPontos(pontosGanhos) {
         nivel = novoNivel;
         document.getElementById('nivelAtual').textContent = nivel;
         if (pontosGanhos > 0) {
-            mostrarNotificacao(`Nível ${nivel} alcançado! 🎉`, 'nivel');
+            mostrarNotificacao(`Nível ${novoNivel} alcançado! 🎉`, 'nivel');
         }
     }
     
@@ -232,11 +222,11 @@ function adicionarEventosDragDrop(elemento) {
 function excluirTarefa(botao) {
     const tarefa = botao.closest('.tarefa');
     tarefa.remove();
-    salvarEstado();
+    salvarDados();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    carregarEstado();
+    carregarDados();
     
     document.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -244,7 +234,62 @@ document.addEventListener('DOMContentLoaded', () => {
         if (listaTarefas) {
             const tarefa = document.querySelector('.arrastando');
             listaTarefas.appendChild(tarefa);
-            salvarEstado();
+            salvarDados();
         }
     });
 });
+
+const style = document.createElement('style');
+style.textContent = `
+    .lista {
+        transition: opacity 0.2s, transform 0.2s;
+    }
+    
+    .fade-out {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+`;
+document.head.appendChild(style);
+
+function apagarLista(botao) {
+    if (confirm('Tem certeza que deseja apagar esta lista e todas as suas tarefas?')) {
+        const lista = botao.closest('.lista');
+        lista.classList.add('fade-out');
+        setTimeout(() => {
+            lista.remove();
+            salvarDados();
+        }, 200);
+    }
+}
+
+function enviarComEnter(event, input) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        const botao = input.nextElementSibling;
+        adicionarTarefa(botao);
+    }
+}
+
+function apagarConcluidas(botao) {
+    const lista = botao.closest('.lista');
+    const tarefasConcluidas = lista.querySelectorAll('.tarefa.completa');
+    
+    if (tarefasConcluidas.length === 0) {
+        mostrarNotificacao('Não há tarefas concluídas para remover', 'erro');
+        return;
+    }
+
+    if (confirm(`Deseja apagar ${tarefasConcluidas.length} tarefa(s) concluída(s)?`)) {
+        tarefasConcluidas.forEach(tarefa => {
+            tarefa.classList.add('fade-out');
+            setTimeout(() => {
+                tarefa.remove();
+            }, 200);
+        });
+        mostrarNotificacao(`${tarefasConcluidas.length} tarefa(s) removida(s)`, 'sucesso');
+    }
+    setTimeout(() => {
+        salvarDados();
+    }, 250);
+}
