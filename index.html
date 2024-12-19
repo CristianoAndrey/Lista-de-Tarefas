@@ -17,7 +17,24 @@
 
     <div class="quadro">
         <div id="listas-container">
-            <!-- As listas serão adicionadas aqui -->
+            <!-- Lista de exemplo -->
+            <div class="lista">
+                <div class="lista-header">
+                    <h2 class="lista-titulo">Tarefas</h2>
+                    <button class="apagar-lista" onclick="apagarLista(this)">✕</button>
+                </div>
+                <div class="lista-tarefas">
+                    <div class="input-grupo">
+                        <select class="prioridade-select">
+                            <option value="baixa">Prioridade Baixa (1 ponto)</option>
+                            <option value="media">Prioridade Média (3 pontos)</option>
+                            <option value="alta">Prioridade Alta (5 pontos)</option>
+                        </select>
+                        <input type="text" class="nova-tarefa" placeholder="Adicionar um cartão" onkeypress="enviarComEnter(event, this)">
+                        <button onclick="adicionarTarefa(this)">Adicionar</button>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="adicionar-lista" onclick="criarNovaLista()">
             <i class="fas fa-plus"></i>
