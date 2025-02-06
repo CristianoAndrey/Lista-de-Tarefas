@@ -1,20 +1,19 @@
 // Configuração do Firebase
 const firebaseConfig = {
-    apiKey: "AIzaSyAAy7mhA7YqtxE0Sc-VVk211Os19eTvIvQ",
-    authDomain: "lista-de-tarefas-91419.firebaseapp.com",
-    projectId: "lista-de-tarefas-91419",
-    storageBucket: "lista-de-tarefas-91419.firebasestorage.app",
-    messagingSenderId: "516873270421",
-    appId: "1:516873270421:web:30c822c07d57eb67c6179c",
-    measurementId: "G-JQ9W29D5MZ"
-  };
+    apiKey: "SUA_API_KEY",
+    authDomain: "SEU_DOMINIO.firebaseapp.com",
+    projectId: "SEU_PROJECT_ID",
+    storageBucket: "SEU_STORAGE_BUCKET",
+    messagingSenderId: "SEU_MESSAGING_SENDER_ID",
+    appId: "SEU_APP_ID"
+};
 
 // Inicialize o Firebase
 const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-let pontos = parseInt(localStorage.getItem('pontos')) || 0;
-let nivel = parseInt(localStorage.getItem('nivel')) || 1;
+let pontos = 0;
+let nivel = 1;
 const pontosParaProximoNivel = 100;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -32,7 +31,7 @@ function salvarDados() {
                 completa: tarefa.classList.contains('completa'),
             });
         });
-        
+
         listas.push({
             titulo: lista.querySelector('.lista-titulo').textContent,
             tarefas: tarefas
@@ -40,23 +39,24 @@ function salvarDados() {
     });
 
     // Salvar no Firestore
-    db.collection('listas').doc('usuario1').set({ listas })
+    db.collection('listas').doc('usuario1').set({ listas, pontos, nivel })
         .then(() => {
             console.log('Dados salvos com sucesso!');
         })
         .catch((error) => {
             console.error('Erro ao salvar dados: ', error);
         });
-
-    localStorage.setItem('pontos', pontos);
-    localStorage.setItem('nivel', nivel);
 }
 
 function carregarDados() {
     db.collection('listas').doc('usuario1').get()
         .then((doc) => {
             if (doc.exists) {
-                const listasData = doc.data().listas;
+                const data = doc.data();
+                const listasData = data.listas;
+                pontos = data.pontos || 0;
+                nivel = data.nivel || 1;
+
                 const listasContainer = document.getElementById('listas-container');
                 listasContainer.innerHTML = '';
 
@@ -69,10 +69,7 @@ function carregarDados() {
                     });
                 });
 
-                document.getElementById('pontosTotal').textContent = pontos;
-                document.getElementById('nivelAtual').textContent = nivel;
-                const progresso = (pontos % pontosParaProximoNivel) / pontosParaProximoNivel * 100;
-                document.getElementById('progressoBarra').style.width = progresso + '%';
+                atualizarInterface();
             } else {
                 console.log('Nenhum dado encontrado!');
             }
@@ -112,13 +109,13 @@ function adicionarTarefaExistente(lista, tarefaData) {
     novaTarefa.className = 'tarefa';
     if (tarefaData.completa) novaTarefa.classList.add('completa');
     novaTarefa.draggable = true;
-    
+
     novaTarefa.innerHTML = `
         <input type="checkbox" onchange="concluirTarefa(this)" data-prioridade="${tarefaData.prioridade}" ${tarefaData.completa ? 'checked' : ''}>
         <span>${tarefaData.texto}</span>
         <button class="excluir" onclick="excluirTarefa(this)">✕</button>
     `;
-    
+
     listaTarefas.appendChild(novaTarefa);
     adicionarEventosDragDrop(novaTarefa);
 }
@@ -138,22 +135,22 @@ function adicionarTarefa(botao) {
     const input = lista.querySelector('.nova-tarefa');
     const prioridadeSelect = lista.querySelector('.prioridade-select');
     const texto = input.value.trim();
-    
+
     if (texto !== '') {
         const listaTarefas = lista.querySelector('.lista-tarefas');
         const novaTarefa = document.createElement('div');
         novaTarefa.className = 'tarefa';
         novaTarefa.draggable = true;
-        
+
         const prioridade = prioridadeSelect.value;
         novaTarefa.classList.add(`prioridade-${prioridade}`);
-        
+
         novaTarefa.innerHTML = `
             <input type="checkbox" onchange="concluirTarefa(this)" data-prioridade="${prioridade}">
             <span>${texto}</span>
             <button class="excluir" onclick="excluirTarefa(this)">✕</button>
         `;
-        
+
         listaTarefas.appendChild(novaTarefa);
         input.value = '';
         adicionarEventosDragDrop(novaTarefa);
@@ -170,7 +167,7 @@ function concluirTarefa(checkbox) {
         'alta': 5
     };
     const pontosGanhos = pontosPorPrioridade[prioridade];
-    
+
     if (checkbox.checked) {
         tarefa.classList.add('completa', 'tarefa-completada');
         atualizarPontos(pontosGanhos);
@@ -186,18 +183,21 @@ function concluirTarefa(checkbox) {
 function atualizarPontos(pontosGanhos) {
     pontos += pontosGanhos;
     pontos = Math.max(0, pontos);
-    
-    document.getElementById('pontosTotal').textContent = pontos;
-    
+
     const novoNivel = Math.floor(pontos / pontosParaProximoNivel) + 1;
     if (novoNivel !== nivel) {
         nivel = novoNivel;
-        document.getElementById('nivelAtual').textContent = nivel;
         if (pontosGanhos > 0) {
             mostrarNotificacao(`Nível ${novoNivel} alcançado! 🎉`, 'nivel');
         }
     }
-    
+
+    atualizarInterface();
+}
+
+function atualizarInterface() {
+    document.getElementById('pontosTotal').textContent = pontos;
+    document.getElementById('nivelAtual').textContent = nivel;
     const progresso = (pontos % pontosParaProximoNivel) / pontosParaProximoNivel * 100;
     document.getElementById('progressoBarra').style.width = progresso + '%';
 }
@@ -205,8 +205,8 @@ function atualizarPontos(pontosGanhos) {
 function mostrarNotificacao(texto, tipo) {
     const notificacao = document.createElement('div');
     let cor;
-    
-    switch(tipo) {
+
+    switch (tipo) {
         case 'sucesso':
             cor = '#2ed573';
             break;
@@ -258,18 +258,14 @@ function excluirTarefa(botao) {
     salvarDados();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    carregarDados();
-    
-    document.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        const listaTarefas = e.target.closest('.lista-tarefas');
-        if (listaTarefas) {
-            const tarefa = document.querySelector('.arrastando');
-            listaTarefas.appendChild(tarefa);
-            salvarDados();
-        }
-    });
+document.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    const listaTarefas = e.target.closest('.lista-tarefas');
+    if (listaTarefas) {
+        const tarefa = document.querySelector('.arrastando');
+        listaTarefas.appendChild(tarefa);
+        salvarDados();
+    }
 });
 
 const style = document.createElement('style');
@@ -277,7 +273,7 @@ style.textContent = `
     .lista {
         transition: opacity 0.2s, transform 0.2s;
     }
-    
+
     .fade-out {
         opacity: 0;
         transform: scale(0.95);
@@ -307,7 +303,7 @@ function enviarComEnter(event, input) {
 function apagarConcluidas(botao) {
     const lista = botao.closest('.lista');
     const tarefasConcluidas = lista.querySelectorAll('.tarefa.completa');
-    
+
     if (tarefasConcluidas.length === 0) {
         mostrarNotificacao('Não há tarefas concluídas para remover', 'erro');
         return;
