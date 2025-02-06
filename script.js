@@ -1,6 +1,57 @@
 const JSONBIN_API_KEY = '$2a$10$pH.lC9/nIbLeA6d/8q0r2eo1yFoRjOTEltc0eJq24SYZe3217GCby'; // Substitua pela sua API Key
 const JSONBIN_BIN_ID = '67a534881ea5ae6cf02905c0'; // Substitua pelo ID do seu bin (criado automaticamente)
 
+
+async function salvarDados() {
+    const listas = [];
+    document.querySelectorAll('.lista').forEach(lista => {
+        const tarefas = [];
+        lista.querySelectorAll('.tarefa').forEach(tarefa => {
+            tarefas.push({
+                texto: tarefa.querySelector('span').textContent,
+                prioridade: tarefa.querySelector('input[type="checkbox"]').getAttribute('data-prioridade'),
+                completa: tarefa.classList.contains('completa'),
+            });
+        });
+
+        listas.push({
+            titulo: lista.querySelector('.lista-titulo').textContent,
+            tarefas: tarefas
+        });
+    });
+
+    const dados = { listas, pontos, nivel };
+
+    try {
+        const url = JSONBIN_BIN_ID
+            ? `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}` // Atualiza o bin existente
+            : 'https://api.jsonbin.io/v3/b'; // Cria um novo bin
+
+        const method = JSONBIN_BIN_ID ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Master-Key': JSONBIN_API_KEY,
+            },
+            body: JSON.stringify(dados),
+        });
+
+        if (!response.ok) throw new Error('Erro ao salvar dados');
+
+        const result = await response.json();
+        if (!JSONBIN_BIN_ID) {
+            // Se um novo bin foi criado, salve o ID para uso futuro
+            JSONBIN_BIN_ID = result.metadata.id;
+            console.log('Novo bin criado com ID:', JSONBIN_BIN_ID);
+        }
+
+        console.log('Dados salvos com sucesso!');
+    } catch (error) {
+        console.error('Erro ao salvar dados:', error);
+    }
+}
 let pontos = 0;
 let nivel = 1;
 const pontosParaProximoNivel = 100;
