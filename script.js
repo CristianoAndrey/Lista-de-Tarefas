@@ -1,18 +1,5 @@
-// Configuração do Firebase
- const firebaseConfig = {
-    apiKey: "AIzaSyAAy7mhA7YqtxE0Sc-VVk211Os19eTvIvQ",
-    authDomain: "lista-de-tarefas-91419.firebaseapp.com",
-    projectId: "lista-de-tarefas-91419",
-    storageBucket: "lista-de-tarefas-91419.firebasestorage.app",
-    messagingSenderId: "516873270421",
-    appId: "1:516873270421:web:30c822c07d57eb67c6179c",
-    measurementId: "G-JQ9W29D5MZ"
-  };
-
-
-// Inicialize o Firebase
-const app = firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const JSONBIN_API_KEY = '$2a$10$pH.lC9/nIbLeA6d/8q0r2eo1yFoRjOTEltc0eJq24SYZe3217GCby'; // Substitua pela sua API Key
+const JSONBIN_BIN_ID = '67a534881ea5ae6cf02905c0'; // Substitua pelo ID do seu bin (criado automaticamente)
 
 let pontos = 0;
 let nivel = 1;
@@ -22,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     carregarDados();
 });
 
-function salvarDados() {
+async function salvarDados() {
     const listas = [];
     document.querySelectorAll('.lista').forEach(lista => {
         const tarefas = [];
@@ -40,45 +27,57 @@ function salvarDados() {
         });
     });
 
-    // Salvar no Firestore
-    db.collection('listas').doc('usuario1').set({ listas, pontos, nivel })
-        .then(() => {
-            console.log('Dados salvos com sucesso!');
-        })
-        .catch((error) => {
-            console.error('Erro ao salvar dados: ', error);
+    const dados = { listas, pontos, nivel };
+
+    try {
+        const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Master-Key': JSONBIN_API_KEY,
+            },
+            body: JSON.stringify(dados),
         });
+
+        if (!response.ok) throw new Error('Erro ao salvar dados');
+        console.log('Dados salvos com sucesso!');
+    } catch (error) {
+        console.error('Erro ao salvar dados:', error);
+    }
 }
 
-function carregarDados() {
-    db.collection('listas').doc('usuario1').get()
-        .then((doc) => {
-            if (doc.exists) {
-                const data = doc.data();
-                const listasData = data.listas;
-                pontos = data.pontos || 0;
-                nivel = data.nivel || 1;
-
-                const listasContainer = document.getElementById('listas-container');
-                listasContainer.innerHTML = '';
-
-                listasData.forEach(listaData => {
-                    const novaLista = criarNovaListaElement(listaData.titulo);
-                    listasContainer.appendChild(novaLista);
-
-                    listaData.tarefas.forEach(tarefa => {
-                        adicionarTarefaExistente(novaLista, tarefa);
-                    });
-                });
-
-                atualizarInterface();
-            } else {
-                console.log('Nenhum dado encontrado!');
-            }
-        })
-        .catch((error) => {
-            console.error('Erro ao carregar dados: ', error);
+async function carregarDados() {
+    try {
+        const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+            headers: {
+                'X-Master-Key': JSONBIN_API_KEY,
+            },
         });
+
+        if (!response.ok) throw new Error('Erro ao carregar dados');
+
+        const data = await response.json();
+        const { listas, pontos: pontosSalvos, nivel: nivelSalvo } = data.record;
+
+        pontos = pontosSalvos || 0;
+        nivel = nivelSalvo || 1;
+
+        const listasContainer = document.getElementById('listas-container');
+        listasContainer.innerHTML = '';
+
+        listas.forEach(listaData => {
+            const novaLista = criarNovaListaElement(listaData.titulo);
+            listasContainer.appendChild(novaLista);
+
+            listaData.tarefas.forEach(tarefa => {
+                adicionarTarefaExistente(novaLista, tarefa);
+            });
+        });
+
+        atualizarInterface();
+    } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+    }
 }
 
 function criarNovaListaElement(titulo) {
