@@ -1,3 +1,17 @@
+// Configuração do Firebase
+const firebaseConfig = {
+    apiKey: "SUA_API_KEY",
+    authDomain: "SEU_DOMINIO.firebaseapp.com",
+    projectId: "SEU_PROJECT_ID",
+    storageBucket: "SEU_STORAGE_BUCKET",
+    messagingSenderId: "SEU_MESSAGING_SENDER_ID",
+    appId: "SEU_APP_ID"
+};
+
+// Inicialize o Firebase
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
 let pontos = parseInt(localStorage.getItem('pontos')) || 0;
 let nivel = parseInt(localStorage.getItem('nivel')) || 1;
 const pontosParaProximoNivel = 100;
@@ -24,29 +38,47 @@ function salvarDados() {
         });
     });
 
-    localStorage.setItem('listas', JSON.stringify(listas));
+    // Salvar no Firestore
+    db.collection('listas').doc('usuario1').set({ listas })
+        .then(() => {
+            console.log('Dados salvos com sucesso!');
+        })
+        .catch((error) => {
+            console.error('Erro ao salvar dados: ', error);
+        });
+
     localStorage.setItem('pontos', pontos);
     localStorage.setItem('nivel', nivel);
 }
 
 function carregarDados() {
-    const listasData = JSON.parse(localStorage.getItem('listas')) || [];
-    const listasContainer = document.getElementById('listas-container');
-    listasContainer.innerHTML = '';
+    db.collection('listas').doc('usuario1').get()
+        .then((doc) => {
+            if (doc.exists) {
+                const listasData = doc.data().listas;
+                const listasContainer = document.getElementById('listas-container');
+                listasContainer.innerHTML = '';
 
-    listasData.forEach(listaData => {
-        const novaLista = criarNovaListaElement(listaData.titulo);
-        listasContainer.appendChild(novaLista);
+                listasData.forEach(listaData => {
+                    const novaLista = criarNovaListaElement(listaData.titulo);
+                    listasContainer.appendChild(novaLista);
 
-        listaData.tarefas.forEach(tarefa => {
-            adicionarTarefaExistente(novaLista, tarefa);
+                    listaData.tarefas.forEach(tarefa => {
+                        adicionarTarefaExistente(novaLista, tarefa);
+                    });
+                });
+
+                document.getElementById('pontosTotal').textContent = pontos;
+                document.getElementById('nivelAtual').textContent = nivel;
+                const progresso = (pontos % pontosParaProximoNivel) / pontosParaProximoNivel * 100;
+                document.getElementById('progressoBarra').style.width = progresso + '%';
+            } else {
+                console.log('Nenhum dado encontrado!');
+            }
+        })
+        .catch((error) => {
+            console.error('Erro ao carregar dados: ', error);
         });
-    });
-
-    document.getElementById('pontosTotal').textContent = pontos;
-    document.getElementById('nivelAtual').textContent = nivel;
-    const progresso = (pontos % pontosParaProximoNivel) / pontosParaProximoNivel * 100;
-    document.getElementById('progressoBarra').style.width = progresso + '%';
 }
 
 function criarNovaListaElement(titulo) {
